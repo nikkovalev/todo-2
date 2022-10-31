@@ -1,0 +1,11 @@
+{
+  "importOrder": [
+    "^react",
+    "@chakra-ui/",
+    "<THIRD_PARTY_MODULES>",
+    "./",
+    ".css"
+  ],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true
+}
