@@ -1,5 +1,5 @@
 function SET(key: string, value: any) {
-  // localStorage.setItem(key, JSON.stringify(value));
+  localStorage.setItem(key, JSON.stringify(value));
 }
 
 function GET<T>(key: string): T | null {
@@ -7,4 +7,8 @@ function GET<T>(key: string): T | null {
   return data ? JSON.parse(data) : null;
 }
 
-export const storage = { SET, GET };
+function REMOVE<T>(key: string) {
+  localStorage.removeItem(key);
+}
+
+export const storage = { SET, GET, REMOVE };

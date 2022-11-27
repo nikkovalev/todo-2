@@ -1,7 +1,7 @@
 import React from "react";
 
 import { CheckIcon, EditIcon } from "@chakra-ui/icons";
-import { Flex, IconButton, Text } from "@chakra-ui/react";
+import { Flex, IconButton, Text, useColorModeValue } from "@chakra-ui/react";
 
 import cn from "classnames";
 
@@ -15,8 +15,8 @@ interface IProps {
 }
 
 export const Todo: React.FC<IProps> = ({ todo, checkTodo, editTodo }) => {
-  const onCheck = () => checkTodo(todo.id);
-  const onEdit = () => editTodo(todo.id, todo.text);
+  const onCheck = () => checkTodo(todo._id);
+  const onEdit = () => editTodo(todo._id, todo.text);
 
   return (
     <Flex
@@ -28,7 +28,6 @@ export const Todo: React.FC<IProps> = ({ todo, checkTodo, editTodo }) => {
       paddingY={2}
       paddingX={4}
       mb={2}
-      bg="white"
       alignItems="center"
     >
       <IconButton

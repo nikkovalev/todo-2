@@ -9,18 +9,28 @@ import {
   Flex,
   Input,
   Text,
+  useColorModeValue,
 } from "@chakra-ui/react";
 
-import { Todo, TodoActions } from "./components";
-import { storage } from "./services";
+import { Header, Todo, TodoActions } from "./components";
+import { AuthProvider } from "./providers";
+import { instance } from "./services/instance";
 import { ITodo, TFilter } from "./types";
 
 const App: React.FC = () => {
   const [todoText, setTodoText] = React.useState<string>("");
   const [todos, setTodos] = React.useState<ITodo[]>([]);
-  const [filter, setFilter] = React.useState<TFilter>("all");
-  const [accordionIndex, setAccordionIndex] = React.useState<number>(-1);
+  const [accordionIndex, setAccordionIndex] = React.useState<number>(0);
   const [editableTodo, setEditableTodo] = React.useState<number | null>(null);
+
+  // Requests
+  async function fetchData(filter: TFilter = "all") {
+    // Get todos
+    const res = await instance.get<{ tasks: ITodo[]; count: number }>(
+      `/tasks?filter=${filter}`
+    );
+    setTodos(res.data.tasks);
+  }
 
   // Accordions
   const toggleAccordion = () => setAccordionIndex(~accordionIndex);
@@ -29,51 +39,42 @@ const App: React.FC = () => {
   const handleChangeText = (event: React.ChangeEvent<HTMLInputElement>) => {
     setTodoText(event.target.value);
   };
-  const handleKeyInput = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyInput = async (
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) => {
     const key = event.code || event.key;
     if (key === "Enter") {
       if (editableTodo) {
-        const newTodos = todos.map((t) => {
-          if (t.id === editableTodo) t.text = todoText;
-          return t;
+        await instance.put(`/tasks/${editableTodo}`, {
+          text: todoText,
         });
         setTodoText("");
-        setTodos(newTodos);
-        return;
+        return fetchData();
       }
-      const todo: ITodo = {
-        id: Date.now(),
+      const todo = {
         text: todoText,
         isDone: false,
-      };
+      } as ITodo;
       if (accordionIndex < 0) toggleAccordion();
+      await instance.post("/tasks", todo);
       setTodoText("");
-      setTodos((todos) => [...todos, todo]);
+      fetchData();
     }
   };
 
   // Todos
-  const checkTodo = (id: number) => {
-    const newTodos = todos.map((t) => {
-      if (t.id === id) t.isDone = !t.isDone;
-      return t;
+  const checkTodo = async (id: number) => {
+    const task = todos.find((t) => t._id === id);
+    await instance.put(`/tasks/${id}`, {
+      isDone: !task?.isDone,
     });
-    setTodos(newTodos);
+    fetchData();
   };
-  const clearCompletedTodos = () => {
-    const newTodos = todos.filter((t) => !t.isDone);
-    setTodos(newTodos);
+  const clearCompletedTodos = async () => {
+    await instance.delete("/tasks");
+    fetchData();
   };
-  const changeFilter = (filter: TFilter) => setFilter(filter);
-  const filterTodos = (todos: ITodo[], filter: TFilter) => {
-    if (filter === "all") return todos;
-    return todos.filter((t) => {
-      return (
-        (filter === "active" && !t.isDone) ||
-        (filter === "completed" && !!t.isDone)
-      );
-    });
-  };
+  const changeFilter = (filter: TFilter) => fetchData(filter);
   const editTodo = (id: number, initialText: string) => {
     setTodoText(initialText);
     setEditableTodo(id);
@@ -83,26 +84,18 @@ const App: React.FC = () => {
   };
 
   React.useEffect(() => {
-    // Get todos from localStorage
-    const todos = storage.GET<ITodo[]>("todos");
-    if (todos) setTodos(todos);
-    return () => {
-      // Save todos to localStorage
-      storage.SET("todos", todos);
-    };
+    fetchData();
   }, []);
 
+  // styles
+
   return (
-    <div>
+    <AuthProvider>
+      <Header />
       <Text as="h1" fontSize="6xl" mb={20} textAlign="center" fontWeight={500}>
         TODOS
       </Text>
-      <Accordion
-        width={800}
-        allowToggle={true}
-        bg="white"
-        index={accordionIndex}
-      >
+      <Accordion width={800} allowToggle={true} index={accordionIndex}>
         <AccordionItem>
           <Flex mb={4}>
             <AccordionButton
@@ -111,7 +104,7 @@ const App: React.FC = () => {
               borderRadius={10}
               onClick={toggleAccordion}
             >
-              <AccordionIcon fontSize={30} />
+              <AccordionIcon color="black" fontSize={30} />
             </AccordionButton>
             <Input
               flexGrow={1}
@@ -125,9 +118,9 @@ const App: React.FC = () => {
             />
           </Flex>
           <AccordionPanel p={0}>
-            {filterTodos(todos, filter).map((t) => (
+            {todos.map((t) => (
               <Todo
-                key={t.id}
+                key={t._id}
                 todo={t}
                 checkTodo={checkTodo}
                 editTodo={editTodo}
@@ -141,7 +134,7 @@ const App: React.FC = () => {
         changeFilter={changeFilter}
         clearCompletedTodos={clearCompletedTodos}
       />
-    </div>
+    </AuthProvider>
   );
 };
 
